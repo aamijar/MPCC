@@ -33,6 +33,8 @@ class Plotting {
 public:
     void plotRun(const std::list<MPCReturn> &log, const TrackPos &track_xy) const;
     void plotSim(const std::list<MPCReturn> &log, const TrackPos &track_xy) const;
+    void plotSim(const std::list<MPCReturn> &log, const std::list<MPCReturn> &log2, const TrackPos &track_xy) const;
+    void getCarBox(std::vector<double>& vec_x, std::vector<double>& vec_y, State state) const;
 
     Plotting(double Ts, PathToJson path);
 

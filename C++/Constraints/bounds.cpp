@@ -87,4 +87,9 @@ Bounds_s Bounds::getBoundsLS() const
 Bounds_s Bounds::getBoundsUS() const{
     return  u_bounds_s_;
 }
+
+void Bounds::set_vs_u(double vs_u)
+{
+    u_bounds_x_(9) = vs_u;
+}
 }

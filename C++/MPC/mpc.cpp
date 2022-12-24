@@ -74,6 +74,11 @@ void MPC::setStage(const State &xk, const Input &uk, const int time_step)
     stages_[time_step].lin_model = normalizeDynamics(model_.getLinModel(xk_nz,uk));
     stages_[time_step].constrains_mat = normalizeCon(constraints_.getConstraints(track_,xk_nz,uk));
 
+    outer_[time_step].xk.X = stages_[time_step].constrains_mat.outer[0];
+    outer_[time_step].xk.Y = stages_[time_step].constrains_mat.outer[1];
+    inner_[time_step].xk.X = stages_[time_step].constrains_mat.inner[0];
+    inner_[time_step].xk.Y = stages_[time_step].constrains_mat.inner[1];
+
     stages_[time_step].l_bounds_x = normalization_param_.T_x_inv*bounds_.getBoundsLX();
     stages_[time_step].u_bounds_x = normalization_param_.T_x_inv*bounds_.getBoundsUX();
     stages_[time_step].l_bounds_u = normalization_param_.T_u_inv*bounds_.getBoundsLU();
@@ -113,7 +118,7 @@ ConstrainsMatrix MPC::normalizeCon(const ConstrainsMatrix &con_mat)
     const D_MPC D =  con_mat.D*normalization_param_.T_u;
     const d_MPC dl = con_mat.dl;
     const d_MPC du = con_mat.du;
-    return {C,D,dl,du};
+    return {C,D,dl,du,con_mat.outer,con_mat.inner};
 }
 
 std::array<OptVariables,N+1> MPC::deNormalizeSolution(const std::array<OptVariables,N+1> &solution)
@@ -255,11 +260,14 @@ MPCReturn MPC::runMPC(State &x0)
     std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
     double time_nmpc = time_span.count();
 
-    return {initial_guess_[0].uk,initial_guess_,time_nmpc};
+    return {initial_guess_[0].uk,initial_guess_,time_nmpc,outer_,inner_};
 }
 
-void MPC::setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y){
+void MPC::setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y, Eigen::MatrixXd *X_Obs, Eigen::MatrixXd *Y_Obs)
+{
     track_.gen2DSpline(X,Y);
+    track_.X_obs = X_Obs;
+    track_.Y_obs = Y_Obs;
 }
 
 

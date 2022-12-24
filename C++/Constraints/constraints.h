@@ -27,12 +27,16 @@ struct ConstrainsMatrix {
     D_MPC D;    //polytopic input constraints
     d_MPC dl;   //lower bounds
     d_MPC du;   //upper bounds
+    Eigen::Vector2d outer;
+    Eigen::Vector2d inner;
 };
 
 struct OneDConstraint {
     const C_i_MPC C_i;
     const double dl_i;
     const double du_i;
+    const Eigen::Vector2d outer;
+    const Eigen::Vector2d inner;
 };
 
 class Constraints {

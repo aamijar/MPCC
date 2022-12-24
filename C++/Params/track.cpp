@@ -16,7 +16,7 @@
 
 #include "track.h"
 namespace mpcc{
-Track::Track(std::string file) 
+Track::Track(std::string file)
 {
     /////////////////////////////////////////////////////
     // Loading Model and Constraint Parameters //////////
@@ -39,12 +39,25 @@ Track::Track(std::string file)
     X_outer = Eigen::Map<Eigen::VectorXd>(x_outer.data(), x_outer.size());
     std::vector<double> y_outer = jsonTrack["Y_o"];
     Y_outer = Eigen::Map<Eigen::VectorXd>(y_outer.data(), y_outer.size());
+
+    uint32_t obsLen = jsonTrack["Obstacles"][0]["X"].size();
+    uint32_t obsCount = jsonTrack["Obstacles"].size();
+    X_obs.resize(obsCount, obsLen);
+    Y_obs.resize(obsCount, obsLen);
+    for (uint32_t i = 0; i < obsCount; i++)
+    {
+        std::vector<double> x_obs = jsonTrack["Obstacles"][i]["X"];
+        std::vector<double> y_obs = jsonTrack["Obstacles"][i]["Y"];
+        X_obs.row(i) = Eigen::Map<Eigen::VectorXd>(x_obs.data(), obsLen);
+        Y_obs.row(i) = Eigen::Map<Eigen::VectorXd>(y_obs.data(), obsLen);
+    }
 }
 
 TrackPos Track::getTrack()
 {
     return {Eigen::Map<Eigen::VectorXd>(X.data(), X.size()), Eigen::Map<Eigen::VectorXd>(Y.data(), Y.size()),
             Eigen::Map<Eigen::VectorXd>(X_inner.data(), X_inner.size()), Eigen::Map<Eigen::VectorXd>(Y_inner.data(), Y_inner.size()),
-            Eigen::Map<Eigen::VectorXd>(X_outer.data(), X_outer.size()), Eigen::Map<Eigen::VectorXd>(Y_outer.data(), Y_outer.size())};
+            Eigen::Map<Eigen::VectorXd>(X_outer.data(), X_outer.size()), Eigen::Map<Eigen::VectorXd>(Y_outer.data(), Y_outer.size()),
+            X_obs, Y_obs};
 }
 }

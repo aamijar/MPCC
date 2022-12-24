@@ -36,6 +36,8 @@ public:
     Bounds_s getBoundsLS() const;
     Bounds_s getBoundsUS() const;
 
+    void set_vs_u(double vs_u);
+
 private:
 
     Bounds_x u_bounds_x_;

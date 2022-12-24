@@ -27,6 +27,32 @@ param_(Param(path.param_path))
 {
 }
 
+
+bool get_line_intersection(double p0_x, double p0_y, double p1_x, double p1_y,
+                           double p2_x, double p2_y, double p3_x, double p3_y, double *i_x, double *i_y)
+{
+    double s1_x, s1_y, s2_x, s2_y;
+    s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
+    s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
+
+    double s, t;
+    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+    {
+        // Collision detected
+        if (i_x != nullptr)
+            *i_x = p0_x + (t * s1_x);
+        if (i_y != nullptr)
+            *i_y = p0_y + (t * s1_y);
+        return true;
+    }
+
+    return false; // No collision
+}
+
+
 OneDConstraint Constraints::getTrackConstraints(const ArcLengthSpline &track,const State &x) const
 {
     // given arc length s and the track -> compute linearized track constraints
@@ -40,8 +66,66 @@ OneDConstraint Constraints::getTrackConstraints(const ArcLengthSpline &track,con
 
     // inner and outer track boundary given left and right width of track
     // TODO make R_out and R_in dependent on s
-    const Eigen::Vector2d pos_outer = pos_center + param_.r_out*tan_center;
-    const Eigen::Vector2d pos_inner = pos_center - param_.r_in*tan_center;
+    Eigen::Vector2d pos_outer = pos_center + param_.r_out*tan_center;
+    Eigen::Vector2d pos_inner = pos_center - param_.r_in*tan_center;
+
+    Eigen::MatrixXd &X_obs = *track.X_obs;
+    Eigen::MatrixXd &Y_obs = *track.Y_obs;
+
+    double i_x = 0;
+    double i_y = 0;
+    double *pi_x = &i_x;
+    double *pi_y = &i_y;
+
+    Eigen::Vector2d pos_inner_vec = pos_inner;
+    Eigen::Vector2d pos_outer_vec = pos_outer;
+
+    for (uint32_t i = 0; i < track.X_obs->rows(); i++)
+    {
+        uint32_t line_segment_count = track.X_obs->cols() - 1;
+        for (uint32_t j = 0; j < line_segment_count; j++)
+        {
+            // d^2 = (x2 - x1)^2 + (y2 - y1)^2
+            auto minDistance = [&pos_center](const Eigen::Vector2d &v1, const Eigen::Vector2d &v2) {
+                return pow((v1(0) - pos_center[0]), 2) +
+                       pow((v1(1) - pos_center[1]) , 2)
+                       < pow((v2(0) - pos_center[0]), 2) +
+                         pow((v2(1) - pos_center[1]), 2);
+            };
+
+            if (get_line_intersection(X_obs(i, j), Y_obs(i, j),
+                                      X_obs(i, j + 1), Y_obs(i, j + 1),
+                                      pos_center[0], pos_center[1], pos_inner[0], pos_inner[1],
+                                      pi_x, pi_y))
+            {
+                Eigen::Vector2d tmp(*pi_x, *pi_y);
+                pos_inner_vec = std::min(pos_inner_vec, tmp, minDistance);
+            }
+
+            if (get_line_intersection(X_obs(i, j), Y_obs(i, j),
+                                      X_obs(i, j + 1), Y_obs(i, j + 1),
+                                      pos_center[0], pos_center[1], pos_outer[0], pos_outer[1],
+                                      pi_x, pi_y))
+            {
+                Eigen::Vector2d tmp(*pi_x, *pi_y);
+                pos_outer_vec = std::min(pos_outer, tmp, minDistance);
+            }
+        }
+    }
+
+    // set pos_inner and pos_outer
+    // check if stuck inside obstacle
+    if (pos_inner != pos_inner_vec && pos_outer != pos_outer_vec) {
+        // pos_inner = pos_outer_vec; // pass left
+        pos_outer = pos_inner_vec; // pass right
+    } else {
+        pos_inner = pos_inner_vec;
+        pos_outer = pos_outer_vec;
+    }
+    // add buffer boundaries
+    pos_inner = pos_inner + 0.025*tan_center;
+    pos_outer = pos_outer - 0.025*tan_center;
+
 
     // Define track Jacobian as Perpendicular vector
     C_i_MPC C_track_constraint = C_i_MPC::Zero();
@@ -51,7 +135,7 @@ OneDConstraint Constraints::getTrackConstraints(const ArcLengthSpline &track,con
     const double track_constraint_lower = tan_center(0)*pos_inner(0) + tan_center(1)*pos_inner(1);
     const double track_constraint_upper = tan_center(0)*pos_outer(0) + tan_center(1)*pos_outer(1);
 
-    return {C_track_constraint,track_constraint_lower,track_constraint_upper};
+    return {C_track_constraint,track_constraint_lower,track_constraint_upper, pos_outer, pos_inner};
 }
 
 OneDConstraint Constraints::getTireConstraintRear(const State &x) const
@@ -182,6 +266,7 @@ ConstrainsMatrix Constraints::getConstraints(const ArcLengthSpline &track,const 
     dl_constrains_matrix(si_index.con_alpha) = alpha_constraints_front.dl_i;
     du_constrains_matrix(si_index.con_alpha) = alpha_constraints_front.du_i;
 
-    return {C_constrains_matrix,D_MPC::Zero(),dl_constrains_matrix,du_constrains_matrix};
+    return {C_constrains_matrix,D_MPC::Zero(),dl_constrains_matrix,du_constrains_matrix,
+            track_constraints.outer, track_constraints.inner};
 }
 }

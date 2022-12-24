@@ -50,6 +50,9 @@ public:
     ArcLengthSpline(const PathToJson &path);
     // void setParam(const Param &param) { param_ = param; };
 
+    Eigen::MatrixXd *X_obs;
+    Eigen::MatrixXd *Y_obs;
+
 private:
     void setData(const Eigen::VectorXd &X_in,const Eigen::VectorXd &Y_in);
     void setRegularData(const Eigen::VectorXd &X_in,const Eigen::VectorXd &Y_in,const Eigen::VectorXd &s_in);

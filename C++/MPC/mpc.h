@@ -70,16 +70,20 @@ struct MPCReturn {
     const Input u0;
     const std::array<OptVariables,N+1> mpc_horizon;
     const double time_total;
+    const std::array<OptVariables,N+1> outer;
+    const std::array<OptVariables,N+1> inner;
 };
 
 class MPC {
 public:
     MPCReturn runMPC(State &x0);
 
-    void setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y);
+    void setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y, Eigen::MatrixXd *X_Obs, Eigen::MatrixXd *Y_Obs);
 
     MPC();
     MPC(int n_sqp, int n_reset, double sqp_mixing, double Ts,const PathToJson &path);
+
+    Bounds bounds_;
 
 private:
     bool valid_initial_guess_;
@@ -88,6 +92,9 @@ private:
 
     std::array<OptVariables, N + 1> initial_guess_;
     std::array<OptVariables, N + 1> optimal_solution_;
+
+    std::array<OptVariables, N + 1> outer_;
+    std::array<OptVariables, N + 1> inner_;
 
     void setMPCProblem();
 
@@ -121,7 +128,7 @@ private:
     Constraints constraints_;
     ArcLengthSpline track_;
 
-    Bounds bounds_;
+    // Bounds bounds_;
     NormalizationParam normalization_param_;
     Param param_;
 

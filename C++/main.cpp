@@ -60,17 +60,51 @@ int main() {
 
     std::list<MPCReturn> log;
     MPC mpc(jsonConfig["n_sqp"],jsonConfig["n_reset"],jsonConfig["sqp_mixing"],jsonConfig["Ts"],json_paths);
-    mpc.setTrack(track_xy.X,track_xy.Y);
-    const double phi_0 = std::atan2(track_xy.Y(1) - track_xy.Y(0),track_xy.X(1) - track_xy.X(0));
-    State x0 = {track_xy.X(0),track_xy.Y(0),phi_0,jsonConfig["v0"],0,0,0,0.5,0,jsonConfig["v0"]};
+    mpc.setTrack(track_xy.X,track_xy.Y, &track_xy.X_obs, &track_xy.Y_obs);
+    const double phi_0 = std::atan2(track_xy.Y(401) - track_xy.Y(400),track_xy.X(401) - track_xy.X(400));
+    State x0 = {track_xy.X(400),track_xy.Y(400),phi_0,jsonConfig["v0"],0,0,0,0.5,0,jsonConfig["v0"]};
+    mpc.bounds_.set_vs_u(1.0);
+
+    std::list<MPCReturn> log2;
+    MPC mpc2(jsonConfig["n_sqp"],jsonConfig["n_reset"],jsonConfig["sqp_mixing"],jsonConfig["Ts"],json_paths);
+    mpc2.setTrack(track_xy.X,track_xy.Y, &track_xy.X_obs, &track_xy.Y_obs);
+    const double phi_02 = std::atan2(track_xy.Y(300) - track_xy.Y(300),track_xy.X(300) - track_xy.X(300));
+    State x02 = {track_xy.X(300),track_xy.Y(300),phi_02,jsonConfig["v0"],0,0,0,0.5,0,jsonConfig["v0"]};
+    mpc2.bounds_.set_vs_u(3.0);
+
+    track_xy.X_obs.conservativeResize(track_xy.X_obs.rows() + 1, track_xy.X_obs.cols());
+    track_xy.Y_obs.conservativeResize(track_xy.Y_obs.rows() + 1, track_xy.Y_obs.cols());
+
     for(int i=0;i<jsonConfig["n_sim"];i++)
     {
+        track_xy.X_obs.conservativeResize(track_xy.X_obs.rows() - 1, track_xy.X_obs.cols());
+        track_xy.Y_obs.conservativeResize(track_xy.Y_obs.rows() - 1, track_xy.Y_obs.cols());
+
         MPCReturn mpc_sol = mpc.runMPC(x0);
         x0 = integrator.simTimeStep(x0,mpc_sol.u0,jsonConfig["Ts"]);
         log.push_back(mpc_sol);
+
+        std::vector<double> corner_x;
+        std::vector<double> corner_y;
+        plotter.getCarBox(corner_x, corner_y, x0);
+
+        track_xy.X_obs.conservativeResize(track_xy.X_obs.rows() + 1, track_xy.X_obs.cols());
+        track_xy.Y_obs.conservativeResize(track_xy.Y_obs.rows() + 1, track_xy.Y_obs.cols());
+
+        track_xy.X_obs.row(track_xy.X_obs.rows() - 1) = Eigen::Map<Eigen::VectorXd>(corner_x.data(), corner_x.size());
+        track_xy.Y_obs.row(track_xy.Y_obs.rows() - 1) = Eigen::Map<Eigen::VectorXd>(corner_y.data(), corner_y.size());
+
+        MPCReturn mpc_sol2 = mpc2.runMPC(x02);
+        x02 = integrator.simTimeStep(x02,mpc_sol2.u0,jsonConfig["Ts"]);
+        log2.push_back(mpc_sol2);
+
     }
-    plotter.plotRun(log,track_xy);
-    plotter.plotSim(log,track_xy);
+    track_xy.X_obs.conservativeResize(track_xy.X_obs.rows() - 1, track_xy.X_obs.cols());
+    track_xy.Y_obs.conservativeResize(track_xy.Y_obs.rows() - 1, track_xy.Y_obs.cols());
+
+    // plotter.plotRun(log,track_xy);
+    // plotter.plotSim(log,track_xy);
+    plotter.plotSim(log, log2, track_xy);
 
     double mean_time = 0.0;
     double max_time = 0.0;

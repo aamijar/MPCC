@@ -37,6 +37,9 @@ struct TrackPos {
 
     const Eigen::VectorXd X_outer;
     const Eigen::VectorXd Y_outer;
+
+    Eigen::MatrixXd X_obs;
+    Eigen::MatrixXd Y_obs;
 };
 
 class Track {
@@ -53,6 +56,9 @@ private:
 
     Eigen::VectorXd X_outer;
     Eigen::VectorXd Y_outer;
+
+    Eigen::MatrixXd X_obs;
+    Eigen::MatrixXd Y_obs;
 };
 };
 

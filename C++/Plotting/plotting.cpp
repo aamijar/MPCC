@@ -172,19 +172,47 @@ void Plotting::plotSim(const std::list<MPCReturn> &log, const TrackPos &track_xy
     std::vector<double> plot_x;
     std::vector<double> plot_y;
 
+    std::vector<double> plot_outer_x;
+    std::vector<double> plot_outer_y;
+    std::vector<double> plot_inner_x;
+    std::vector<double> plot_inner_y;
+
     for(MPCReturn log_i : log)
     {
         plot_x.resize(0);
         plot_y.resize(0);
+        plot_outer_x.resize(0);
+        plot_outer_y.resize(0);
+        plot_inner_x.resize(0);
+        plot_inner_y.resize(0);
         for(int j=0;j<log_i.mpc_horizon.size();j++)
         {
             plot_x.push_back(log_i.mpc_horizon[j].xk.X);
             plot_y.push_back(log_i.mpc_horizon[j].xk.Y);
+
+            plot_outer_x.push_back(log_i.outer[j].xk.X);
+            plot_outer_y.push_back(log_i.outer[j].xk.Y);
+            plot_inner_x.push_back(log_i.inner[j].xk.X);
+            plot_inner_y.push_back(log_i.inner[j].xk.Y);
         }
         plt::clf();
         plt::plot(plot_xc,plot_yc,"r--");
         plt::plot(plot_xi,plot_yi,"k-");
         plt::plot(plot_xo,plot_yo,"k-");
+
+        // plotBox(obs1);
+        for (uint32_t i = 0; i < track_xy.X_obs.rows(); i++)
+        {
+            std::vector<double> plot_xobs(track_xy.X_obs.cols());
+            std::vector<double> plot_yobs(track_xy.Y_obs.cols());
+            Eigen::Map<Eigen::RowVectorXd>(&plot_xobs[0], 1, track_xy.X_obs.cols()) = track_xy.X_obs.row(i);
+            Eigen::Map<Eigen::RowVectorXd>(&plot_yobs[0], 1, track_xy.Y_obs.cols()) = track_xy.Y_obs.row(i);
+            plt::plot(plot_xobs, plot_yobs, "c-");
+        }
+
+        plt::plot(plot_outer_x, plot_outer_y, "g-");
+        plt::plot(plot_inner_x, plot_inner_y, "g-");
+
         plotBox(log_i.mpc_horizon[0].xk);
         plt::plot(plot_x,plot_y,"b-");
         plt::axis("equal");
@@ -193,6 +221,99 @@ void Plotting::plotSim(const std::list<MPCReturn> &log, const TrackPos &track_xy
         plt::pause(0.01);
     }
 }
+
+
+void Plotting::plotSim(const std::list<MPCReturn> &log, const std::list<MPCReturn> &log2, const TrackPos &track_xy) const
+{
+    std::vector<double> plot_xc(track_xy.X.data(),track_xy.X.data() + track_xy.X.size());
+    std::vector<double> plot_yc(track_xy.Y.data(),track_xy.Y.data() + track_xy.Y.size());
+
+    std::vector<double> plot_xi(track_xy.X_inner.data(),track_xy.X_inner.data() + track_xy.X_inner.size());
+    std::vector<double> plot_yi(track_xy.Y_inner.data(),track_xy.Y_inner.data() + track_xy.Y_inner.size());
+    std::vector<double> plot_xo(track_xy.X_outer.data(),track_xy.X_outer.data() + track_xy.X_outer.size());
+    std::vector<double> plot_yo(track_xy.Y_outer.data(),track_xy.Y_outer.data() + track_xy.Y_outer.size());
+
+
+    std::vector<double> plot_x;
+    std::vector<double> plot_y;
+    std::vector<double> plot_x2;
+    std::vector<double> plot_y2;
+
+    std::vector<double> plot_outer_x;
+    std::vector<double> plot_outer_y;
+    std::vector<double> plot_inner_x;
+    std::vector<double> plot_inner_y;
+    std::vector<double> plot_outer_x2;
+    std::vector<double> plot_outer_y2;
+    std::vector<double> plot_inner_x2;
+    std::vector<double> plot_inner_y2;
+
+    auto i1 = log.begin();
+    auto i2 = log2.begin();
+
+    for(; i1 != log.end() && i2 != log2.end(); i1++, i2++)
+    {
+        plot_x.resize(0);
+        plot_y.resize(0);
+        plot_outer_x.resize(0);
+        plot_outer_y.resize(0);
+        plot_inner_x.resize(0);
+        plot_inner_y.resize(0);
+        plot_x2.resize(0);
+        plot_y2.resize(0);
+        plot_outer_x2.resize(0);
+        plot_outer_y2.resize(0);
+        plot_inner_x2.resize(0);
+        plot_inner_y2.resize(0);
+        for(int j=0;j<i1->mpc_horizon.size();j++)
+        {
+            plot_x.push_back(i1->mpc_horizon[j].xk.X);
+            plot_y.push_back(i1->mpc_horizon[j].xk.Y);
+
+            plot_outer_x.push_back(i1->outer[j].xk.X);
+            plot_outer_y.push_back(i1->outer[j].xk.Y);
+            plot_inner_x.push_back(i1->inner[j].xk.X);
+            plot_inner_y.push_back(i1->inner[j].xk.Y);
+
+            plot_x2.push_back(i2->mpc_horizon[j].xk.X);
+            plot_y2.push_back(i2->mpc_horizon[j].xk.Y);
+
+            plot_outer_x2.push_back(i2->outer[j].xk.X);
+            plot_outer_y2.push_back(i2->outer[j].xk.Y);
+            plot_inner_x2.push_back(i2->inner[j].xk.X);
+            plot_inner_y2.push_back(i2->inner[j].xk.Y);
+        }
+        plt::clf();
+        plt::plot(plot_xc,plot_yc,"r--");
+        plt::plot(plot_xi,plot_yi,"k-");
+        plt::plot(plot_xo,plot_yo,"k-");
+
+        for (uint32_t i = 0; i < track_xy.X_obs.rows(); i++)
+        {
+            std::vector<double> plot_xobs(track_xy.X_obs.cols());
+            std::vector<double> plot_yobs(track_xy.Y_obs.cols());
+            Eigen::Map<Eigen::RowVectorXd>(&plot_xobs[0], 1, track_xy.X_obs.cols()) = track_xy.X_obs.row(i);
+            Eigen::Map<Eigen::RowVectorXd>(&plot_yobs[0], 1, track_xy.Y_obs.cols()) = track_xy.Y_obs.row(i);
+            plt::plot(plot_xobs, plot_yobs, "c-");
+        }
+
+        // plt::plot(plot_outer_x, plot_outer_y, "g-");
+        // plt::plot(plot_inner_x, plot_inner_y, "g-");
+        plt::plot(plot_outer_x2, plot_outer_y2, "g-");
+        plt::plot(plot_inner_x2, plot_inner_y2, "g-");
+
+        plotBox(i1->mpc_horizon[0].xk);
+        plotBox(i2->mpc_horizon[0].xk);
+
+        // plt::plot(plot_x,plot_y,"b-");
+        plt::plot(plot_x2,plot_y2,"b-");
+        plt::axis("equal");
+        plt::xlim(-2,2);
+        plt::ylim(-2,2);
+        plt::pause(0.01);
+    }
+}
+
 
 void Plotting::plotBox(const State &x0) const
 {
@@ -217,4 +338,25 @@ void Plotting::plotBox(const State &x0) const
 
     plt::plot(corner_x,corner_y,"k-");
 }
+
+void Plotting::getCarBox(std::vector<double>& corner_x, std::vector<double>& corner_y, State x0) const
+{
+    double body_xl = std::cos(x0.phi)*param_.car_l;
+    double body_xw = std::sin(x0.phi)*param_.car_w;
+    double body_yl = std::sin(x0.phi)*param_.car_l;
+    double body_yw = -std::cos(x0.phi)*param_.car_w;
+
+    corner_x.push_back(x0.X + body_xl + body_xw);
+    corner_x.push_back(x0.X + body_xl - body_xw);
+    corner_x.push_back(x0.X - body_xl - body_xw);
+    corner_x.push_back(x0.X - body_xl + body_xw);
+    corner_x.push_back(x0.X + body_xl + body_xw);
+
+    corner_y.push_back(x0.Y + body_yl + body_yw);
+    corner_y.push_back(x0.Y + body_yl - body_yw);
+    corner_y.push_back(x0.Y - body_yl - body_yw);
+    corner_y.push_back(x0.Y - body_yl + body_yw);
+    corner_y.push_back(x0.Y + body_yl + body_yw);
+}
+
 }
