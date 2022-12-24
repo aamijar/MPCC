@@ -2,7 +2,7 @@
 Simulation environments in C++ and Matlab of the Model Predictive Contouring Controller (MPCC) for Autonomous Racing developed by the Automatic Control Lab (IfA) at ETH Zurich
 
 ## New Changes
-<img src="Images/h2h_sim.gif" width="700" />
+<img src="Images/h2h_sim.gif" width="500" />
 
 * feat: simple obstacle avoidance, head-to-head sim, plot boundaries
 
